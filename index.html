@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Position Sizing Calculator — Van Tharp Method</title>
+<style>
+  :root {
+    --bg: #0d0d0d;
+    --surface: #1a1a1a;
+    --surface-2: #222;
+    --border: #2e2e2e;
+    --text: #f2f2f2;
+    --text-secondary: #9a9a9a;
+    --text-muted: #6b6b6b;
+    --accent: #4f8cff;
+    --danger: #ff5c5c;
+    --radius: 10px;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-sizing: border-box;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100%;
+  }
+  .wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem 1.25rem 4rem;
+  }
+  h1 {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 4px;
+  }
+  .subtitle {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin: 0 0 1.75rem;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 12px;
+    margin-bottom: 1.5rem;
+  }
+  .grid-3 { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  label {
+    font-size: 13px;
+    color: var(--text-secondary);
+    display: block;
+    margin-bottom: 4px;
+  }
+  input[type="number"] {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 15px;
+    outline: none;
+  }
+  input[type="number"]:focus {
+    border-color: var(--accent);
+  }
+  section {
+    border-top: 1px solid var(--border);
+    padding-top: 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+  section h2 {
+    font-size: 14px;
+    font-weight: 500;
+    margin: 0 0 12px;
+  }
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 1rem;
+  }
+  .card p.label {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin: 0 0 4px;
+  }
+  .card p.value {
+    font-size: 22px;
+    font-weight: 500;
+    margin: 0;
+  }
+  .card p.value.small { font-size: 20px; }
+  .final-card {
+    padding: 1rem 1.25rem;
+    margin-top: 12px;
+  }
+  .final-card p.value { font-size: 24px; }
+  .binding {
+    font-size: 13px;
+    margin: 8px 0 0;
+    color: var(--text-secondary);
+  }
+  .trade-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto;
+    gap: 8px;
+    align-items: end;
+    margin-bottom: 8px;
+  }
+  .trade-row label {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+  }
+  button {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  button:hover { border-color: var(--accent); }
+  button.remove-btn {
+    height: 42px;
+    padding: 0 12px;
+  }
+  .empty-hint {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin: 4px 0 0;
+  }
+  .warning {
+    display: none;
+    font-size: 13px;
+    color: var(--danger);
+    background: var(--surface);
+    border: 1px solid var(--danger);
+    border-radius: var(--radius);
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.25rem;
+  }
+  .err {
+    font-size: 13px;
+    color: var(--danger);
+    display: none;
+    margin-top: 8px;
+  }
+  footer {
+    margin-top: 2rem;
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: center;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #f7f7f8;
+      --surface: #ffffff;
+      --surface-2: #eeeeee;
+      --border: #e0e0e0;
+      --text: #1a1a1a;
+      --text-secondary: #666666;
+      --text-muted: #999999;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Position Sizing Calculator</h1>
+  <p class="subtitle">Van Tharp R-multiple method — risk, portfolio heat, capital cap &amp; cash constraints</p>
+
+  <div class="grid">
+    <div>
+      <label for="capital">Account size (₹)</label>
+      <input type="number" id="capital" value="300000" step="1000" />
+    </div>
+    <div>
+      <label for="riskPct">Risk per trade (%)</label>
+      <input type="number" id="riskPct" value="2" step="0.1" />
+    </div>
+    <div>
+      <label for="maxCapPct">Max capital per single trade (%)</label>
+      <input type="number" id="maxCapPct" value="30" step="1" />
+    </div>
+    <div>
+      <label for="maxHeatPct">Max portfolio heat (%)</label>
+      <input type="number" id="maxHeatPct" value="6" step="0.5" />
+    </div>
+  </div>
+
+  <section>
+    <h2>Open trades</h2>
+    <div id="trades"></div>
+    <p class="empty-hint" id="empty-hint">No open trades yet.</p>
+  </section>
+
+  <div class="grid grid-3">
+    <div class="card">
+      <p class="label">Total capital deployed</p>
+      <p class="value" id="out-capdeployed">₹0</p>
+    </div>
+    <div class="card">
+      <p class="label">Remaining cash available</p>
+      <p class="value" id="out-remcash">-</p>
+    </div>
+    <div class="card">
+      <p class="label">Total open risk (heat)</p>
+      <p class="value" id="out-openrisk">₹0</p>
+    </div>
+    <div class="card">
+      <p class="label">Portfolio heat used</p>
+      <p class="value" id="out-heatpct">-</p>
+    </div>
+    <div class="card">
+      <p class="label">Remaining heat budget</p>
+      <p class="value" id="out-remheat">-</p>
+    </div>
+  </div>
+
+  <div class="warning" id="cash-warning"></div>
+
+  <section>
+    <h2>Next trade sizing</h2>
+    <div class="grid">
+      <div>
+        <label for="nEntry">Entry price</label>
+        <input type="number" id="nEntry" value="250" step="0.5" />
+      </div>
+      <div>
+        <label for="nSlPct">SL (%)</label>
+        <input type="number" id="nSlPct" value="8" step="0.1" />
+      </div>
+      <div>
+        <label for="nStop">Stop-loss price</label>
+        <input type="number" id="nStop" value="230" step="0.5" />
+      </div>
+    </div>
+    <div class="grid grid-3">
+      <div class="card">
+        <p class="label">Per-trade risk shares</p>
+        <p class="value small" id="out-riskshares">-</p>
+      </div>
+      <div class="card">
+        <p class="label">Portfolio heat shares</p>
+        <p class="value small" id="out-heatshares">-</p>
+      </div>
+      <div class="card">
+        <p class="label">Per-trade cap shares</p>
+        <p class="value small" id="out-tradecapshares">-</p>
+      </div>
+      <div class="card">
+        <p class="label">Available cash shares</p>
+        <p class="value small" id="out-cashshares">-</p>
+      </div>
+    </div>
+    <div class="card final-card">
+      <p class="label">Final shares to buy (binding constraint)</p>
+      <p class="value" id="out-final">-</p>
+      <p class="binding" id="out-binding"></p>
+    </div>
+    <button id="addTrade" style="margin-top: 12px;">+ Add as open trade</button>
+  </section>
+
+  <p class="err" id="err"></p>
+
+  <footer>Risk-based, portfolio-heat, capital-cap and cash constraints are each computed independently; the smallest wins.</footer>
+</div>
+
+<script>
+(function () {
+  let trades = [];
+  let lastFinalShares = 0;
+  let lastEditedSlField = 'pct';
+  let lastRemCash = 0;
+
+  const $ = (id) => document.getElementById(id);
+  const fmt = (n) => Number.isFinite(n) ? new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(n) : '-';
+
+  function renderTrades() {
+    const container = $('trades');
+    const hint = $('empty-hint');
+    container.innerHTML = '';
+    hint.style.display = trades.length === 0 ? 'block' : 'none';
+    trades.forEach((t, i) => {
+      const row = document.createElement('div');
+      row.className = 'trade-row';
+      row.innerHTML =
+        '<div><label>Entry</label><input type="number" value="' + t.entry + '" step="0.5" data-idx="' + i + '" data-field="entry" /></div>' +
+        '<div><label>Stop</label><input type="number" value="' + t.stop + '" step="0.5" data-idx="' + i + '" data-field="stop" /></div>' +
+        '<div><label>Qty</label><input type="number" value="' + t.qty + '" step="1" data-idx="' + i + '" data-field="qty" /></div>' +
+        '<button class="remove-btn" data-remove="' + i + '" aria-label="Remove trade">✕</button>';
+      container.appendChild(row);
+    });
+    container.querySelectorAll('input').forEach((inp) => {
+      inp.addEventListener('input', (e) => {
+        const idx = parseInt(e.target.dataset.idx, 10);
+        const field = e.target.dataset.field;
+        trades[idx][field] = parseFloat(e.target.value);
+        calc();
+      });
+    });
+    container.querySelectorAll('button[data-remove]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        const idx = parseInt(e.currentTarget.dataset.remove, 10);
+        trades.splice(idx, 1);
+        renderTrades();
+        calc();
+      });
+    });
+  }
+
+  function syncSlFromPct() {
+    const nEntry = parseFloat($('nEntry').value);
+    const slPct = parseFloat($('nSlPct').value);
+    if (Number.isFinite(nEntry) && nEntry > 0 && Number.isFinite(slPct)) {
+      const stop = nEntry * (1 - slPct / 100);
+      $('nStop').value = Math.round(stop * 100) / 100;
+    }
+  }
+
+  function syncPctFromSl() {
+    const nEntry = parseFloat($('nEntry').value);
+    const nStop = parseFloat($('nStop').value);
+    if (Number.isFinite(nEntry) && nEntry > 0 && Number.isFinite(nStop)) {
+      const pct = ((nEntry - nStop) / nEntry) * 100;
+      $('nSlPct').value = Math.round(pct * 100) / 100;
+    }
+  }
+
+  function calc() {
+    const capital = parseFloat($('capital').value);
+    const riskPct = parseFloat($('riskPct').value);
+    const maxCapPct = parseFloat($('maxCapPct').value);
+    const maxHeatPct = parseFloat($('maxHeatPct').value);
+    const nEntry = parseFloat($('nEntry').value);
+    const nStop = parseFloat($('nStop').value);
+    const errEl = $('err');
+    const cashWarnEl = $('cash-warning');
+
+    if (![capital, riskPct, maxCapPct, maxHeatPct].every((v) => Number.isFinite(v) && v > 0)) {
+      errEl.textContent = 'Enter positive values for account size, risk %, capital cap, and heat cap.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    let capDeployed = 0;
+    let openRisk = 0;
+    let validTrades = true;
+    trades.forEach((t) => {
+      if (![t.entry, t.stop, t.qty].every((v) => Number.isFinite(v) && v > 0)) { validTrades = false; return; }
+      capDeployed += t.entry * t.qty;
+      openRisk += Math.abs(t.entry - t.stop) * t.qty;
+    });
+
+    if (!validTrades) {
+      errEl.textContent = 'Fill in entry, stop, and quantity for every open trade.';
+      errEl.style.display = 'block';
+    } else {
+      errEl.style.display = 'none';
+    }
+
+    $('out-capdeployed').textContent = '₹' + fmt(capDeployed);
+    $('out-openrisk').textContent = '₹' + fmt(openRisk);
+
+    const remCash = capital - capDeployed;
+    lastRemCash = remCash;
+    $('out-remcash').textContent = '₹' + fmt(remCash);
+
+    if (remCash < 0) {
+      cashWarnEl.style.display = 'block';
+      cashWarnEl.textContent = 'Open trades already deploy ₹' + fmt(capDeployed) + ', which exceeds your ₹' + fmt(capital) + ' account size by ₹' + fmt(Math.abs(remCash)) + '. Reduce quantities or remove a trade.';
+    } else {
+      cashWarnEl.style.display = 'none';
+    }
+
+    const heatBudget = capital * (maxHeatPct / 100);
+    const heatUsedPct = capital > 0 ? (openRisk / capital) * 100 : 0;
+    const remHeat = heatBudget - openRisk;
+
+    $('out-heatpct').textContent = fmt(heatUsedPct) + '% of ' + fmt(maxHeatPct) + '%';
+    $('out-remheat').textContent = '₹' + fmt(remHeat);
+
+    if (!Number.isFinite(nEntry) || !Number.isFinite(nStop) || nEntry <= 0 || Math.abs(nEntry - nStop) <= 0) {
+      $('out-riskshares').textContent = '-';
+      $('out-heatshares').textContent = '-';
+      $('out-tradecapshares').textContent = '-';
+      $('out-cashshares').textContent = '-';
+      $('out-final').textContent = '-';
+      $('out-binding').textContent = '';
+      lastFinalShares = 0;
+      return;
+    }
+
+    const stopDist = Math.abs(nEntry - nStop);
+    const perTradeRiskAmount = capital * (riskPct / 100);
+    const riskShares = perTradeRiskAmount / stopDist;
+    const heatShares = Math.max(remHeat, 0) / stopDist;
+    const singleTradeBudget = capital * (maxCapPct / 100);
+    const tradeCapShares = singleTradeBudget / nEntry;
+    const cashShares = Math.max(remCash, 0) / nEntry;
+
+    const options = [
+      { name: 'Per-trade risk allowance', shares: riskShares },
+      { name: 'Remaining portfolio heat', shares: heatShares },
+      { name: 'Per-trade capital cap', shares: tradeCapShares },
+      { name: 'Available cash', shares: cashShares }
+    ];
+    options.sort((a, b) => a.shares - b.shares);
+    const finalShares = Math.floor(options[0].shares);
+    const binding = options[0].name + ' is binding';
+
+    $('out-riskshares').textContent = fmt(Math.floor(riskShares)) + ' shares';
+    $('out-heatshares').textContent = fmt(Math.floor(heatShares)) + ' shares';
+    $('out-tradecapshares').textContent = fmt(Math.floor(tradeCapShares)) + ' shares';
+    $('out-cashshares').textContent = fmt(Math.floor(cashShares)) + ' shares';
+    $('out-final').textContent = fmt(finalShares) + ' shares';
+    $('out-binding').textContent = binding;
+    lastFinalShares = finalShares;
+  }
+
+  $('nEntry').addEventListener('input', () => {
+    if (lastEditedSlField === 'pct') { syncSlFromPct(); } else { syncPctFromSl(); }
+    calc();
+  });
+  $('nSlPct').addEventListener('input', () => {
+    lastEditedSlField = 'pct';
+    syncSlFromPct();
+    calc();
+  });
+  $('nStop').addEventListener('input', () => {
+    lastEditedSlField = 'stop';
+    syncPctFromSl();
+    calc();
+  });
+
+  $('addTrade').addEventListener('click', () => {
+    const nEntry = parseFloat($('nEntry').value);
+    const nStop = parseFloat($('nStop').value);
+    const errEl = $('err');
+
+    if (!Number.isFinite(nEntry) || !Number.isFinite(nStop) || nEntry <= 0 || Math.abs(nEntry - nStop) <= 0) {
+      errEl.textContent = 'Enter a valid entry price and stop-loss before adding.';
+      errEl.style.display = 'block';
+      return;
+    }
+    if (lastFinalShares <= 0) {
+      errEl.textContent = 'Final shares is 0 — no budget available to open this trade.';
+      errEl.style.display = 'block';
+      return;
+    }
+    const cost = lastFinalShares * nEntry;
+    if (cost > lastRemCash + 0.01) {
+      errEl.textContent = 'This trade would cost ₹' + fmt(cost) + ' but only ₹' + fmt(lastRemCash) + ' cash is available.';
+      errEl.style.display = 'block';
+      return;
+    }
+    trades.push({ entry: nEntry, stop: nStop, qty: lastFinalShares });
+    renderTrades();
+    calc();
+  });
+
+  ['capital', 'riskPct', 'maxCapPct', 'maxHeatPct'].forEach((id) => {
+    $(id).addEventListener('input', calc);
+  });
+
+  renderTrades();
+  calc();
+})();
+</script>
+</body>
+</html>
